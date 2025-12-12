@@ -182,18 +182,22 @@ async function* agentStream(
         );
 
       for await (const [message] of stream) {
-        if (AIMessage.isInstance(message) && message.tool_calls) {
-          console.log("🤖 Agent response:", message.text);
-          yield { type: "agent_chunk", text: message.text, ts: Date.now() };
-          for (const toolCall of message.tool_calls) {
-            console.log("🔧 Tool call:", toolCall.name);
-            yield {
-              type: "tool_call",
-              id: toolCall.id ?? uuidv4(),
-              name: toolCall.name,
-              args: toolCall.args,
-              ts: Date.now(),
-            };
+        if (AIMessage.isInstance(message)) {
+          if (message.text) {
+            console.log("🤖 Agent response:", message.text);
+            yield { type: "agent_chunk", text: message.text, ts: Date.now() };
+          }
+          if (message.tool_calls) {
+            for (const toolCall of message.tool_calls) {
+              console.log("🔧 Tool call:", toolCall.name);
+              yield {
+                type: "tool_call",
+                id: toolCall.id ?? uuidv4(),
+                name: toolCall.name,
+                args: toolCall.args,
+                ts: Date.now(),
+              };
+            }
           }
         }
         if (ToolMessage.isInstance(message)) {
