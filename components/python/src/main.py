@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import os
 from pathlib import Path
 from typing import AsyncIterator
 from uuid import uuid4
@@ -11,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain.agents import create_agent
 from langchain.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableGenerator
+from langchain_groq import ChatGroq
 from langgraph.checkpoint.memory import InMemorySaver
 from starlette.staticfiles import StaticFiles
 
@@ -68,8 +70,20 @@ Guidelines:
 - Repeat back important details to ensure accuracy
 """
 
+# Try Groq first, fallback to Ollama if not available
+def get_model():
+    if os.getenv("GROQ_API_KEY"):
+        print("🚀 Using Groq (llama-3.3-70b-versatile) for fast, high-quality inference")
+        return ChatGroq(
+            api_key=os.getenv("GROQ_API_KEY"),
+            model="llama-3.3-70b-versatile",
+            temperature=0.7,
+        )
+    print("🦙 Using local Ollama (llama-3.1-8b) as fallback")
+    return "ollama:hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M"
+
 agent = create_agent(
-    model="ollama:hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M",
+    model=get_model(),
     tools=all_skills,
     system_prompt=system_prompt,
     checkpointer=InMemorySaver(),

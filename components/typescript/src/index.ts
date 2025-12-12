@@ -18,6 +18,7 @@ import { CARTESIA_TTS_SYSTEM_PROMPT, CartesiaTTS } from "./cartesia";
 import { AssemblyAISTT } from "./assemblyai/index";
 import type { VoiceAgentEvent } from "./types";
 import { allSkills } from "./agent/skills";
+import { ChatGroq } from "@langchain/groq";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,8 +59,22 @@ Guidelines:
 ${CARTESIA_TTS_SYSTEM_PROMPT}
 `;
 
+// Try Groq first, fallback to Ollama if not available
+function getModel() {
+  if (process.env.GROQ_API_KEY) {
+    console.log("🚀 Using Groq (llama-3.3-70b-versatile) for fast, high-quality inference");
+    return new ChatGroq({
+      apiKey: process.env.GROQ_API_KEY,
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.7,
+    });
+  }
+  console.log("🦙 Using local Ollama (llama-3.1-8b) as fallback");
+  return "ollama:hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M";
+}
+
 const agent = createAgent({
-  model: "ollama:hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M",
+  model: getModel(),
   tools: allSkills,
   checkpointer: new MemorySaver(),
   systemPrompt: systemPrompt,
