@@ -41,18 +41,39 @@ Each stage is an async generator that transforms a stream of events:
 
 - **Node.js** (v18+) or **Python** (3.11+)
 - **pnpm** or **uv** (Python package manager)
+- **Ollama** - Install from [ollama.ai](https://ollama.ai)
 
 ### API Keys
 
-| Service | Environment Variable | Purpose |
-|---------|---------------------|---------|
-| AssemblyAI | `ASSEMBLYAI_API_KEY` | Speech-to-Text |
-| Cartesia | `CARTESIA_API_KEY` | Text-to-Speech |
-| Anthropic | `ANTHROPIC_API_KEY` | LangChain Agent (Claude) |
+| Service | Environment Variable | Purpose | Required |
+|---------|---------------------|---------|----------|
+| AssemblyAI | `ASSEMBLYAI_API_KEY` | Speech-to-Text | Yes ($50 free credits) |
+| Cartesia | `CARTESIA_API_KEY` | Text-to-Speech | Yes (20k free credits/month) |
+| ~~Anthropic~~ | ~~`ANTHROPIC_API_KEY`~~ | ~~LangChain Agent (Claude)~~ | No (using local Ollama) |
+
+**Note:** This demo now uses **Ollama with Llama 3.1** for the LLM agent, eliminating the need for Anthropic API keys. Make sure you have Ollama installed and the Llama 3.1 model pulled.
 
 ## Quick Start
 
-### Using Make (Recommended)
+### 1. Install Ollama and Pull Model
+
+```bash
+# Install Ollama from https://ollama.ai
+# Then pull a Llama 3.1 model:
+ollama pull hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M
+```
+
+### 2. Set Up API Keys
+
+Create a `.env` file with your AssemblyAI and Cartesia API keys:
+```bash
+ASSEMBLYAI_API_KEY=your_key_here
+CARTESIA_API_KEY=your_key_here
+```
+
+### 3. Run the Demo
+
+#### Using Make (Recommended)
 
 ```bash
 # Install all dependencies

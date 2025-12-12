@@ -70,7 +70,7 @@ ${CARTESIA_TTS_SYSTEM_PROMPT}
 """
 
 agent = create_agent(
-    model="anthropic:claude-haiku-4-5",
+    model="ollama:hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M",
     tools=[add_to_order, confirm_order],
     system_prompt=system_prompt,
     checkpointer=InMemorySaver(),

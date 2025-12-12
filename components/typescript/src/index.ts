@@ -77,7 +77,7 @@ ${CARTESIA_TTS_SYSTEM_PROMPT}
 `;
 
 const agent = createAgent({
-  model: "claude-haiku-4-5",
+  model: "ollama:hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M",
   tools: [addToOrder, confirmOrder],
   checkpointer: new MemorySaver(),
   systemPrompt: systemPrompt,
