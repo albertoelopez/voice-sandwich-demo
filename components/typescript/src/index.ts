@@ -24,6 +24,7 @@ import { AssemblyAISTT } from "./assemblyai/index";
 import type { VoiceAgentEvent } from "./types";
 import { allSkills } from "./agent/skills";
 import { ChatGroq } from "@langchain/groq";
+import { ChatOllama } from "@langchain/ollama";
 
 const STATIC_DIR = path.join(__dirname, "../../web/dist");
 const PORT = parseInt(process.env.PORT ?? "8000");
@@ -62,18 +63,24 @@ Guidelines:
 ${CARTESIA_TTS_SYSTEM_PROMPT}
 `;
 
-// Try Groq first, fallback to Ollama if not available
+// Use local Ollama (Groq has function calling format issues with LangChain)
 function getModel() {
-  if (process.env.GROQ_API_KEY) {
-    console.log("🚀 Using Groq (mixtral-8x7b-32768) - balanced speed & function calling");
-    return new ChatGroq({
-      apiKey: process.env.GROQ_API_KEY,
-      model: "mixtral-8x7b-32768", // Good balance: fast + reliable function calling
-      temperature: 0.3,
-    });
-  }
-  console.log("🦙 Using local Ollama (llama-3.1-8b) as fallback");
-  return "ollama:hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M";
+  console.log("🦙 Using local Ollama (llama3.1:8b) with tool support");
+  return new ChatOllama({
+    model: "llama3.1:8b",
+    temperature: 0.5,
+    baseUrl: "http://localhost:11434", // Default Ollama URL
+  });
+
+  // Groq temporarily disabled due to malformed function call format
+  // Error: Groq generates '<function=name{...}>' instead of proper JSON
+  // if (process.env.GROQ_API_KEY) {
+  //   return new ChatGroq({
+  //     apiKey: process.env.GROQ_API_KEY,
+  //     model: "llama-3.3-70b-versatile",
+  //     temperature: 0.5,
+  //   });
+  // }
 }
 
 const agent = createAgent({
@@ -164,18 +171,22 @@ async function* agentStream(
   for await (const event of eventStream) {
     yield event;
     if (event.type === "stt_output") {
-      const stream = await agent.stream(
-        { messages: [new HumanMessage(event.transcript)] },
-        {
-          configurable: { thread_id: threadId },
-          streamMode: "messages",
-        }
-      );
+      console.log("🎤 User said:", event.transcript);
+      try {
+        const stream = await agent.stream(
+          { messages: [new HumanMessage(event.transcript)] },
+          {
+            configurable: { thread_id: threadId },
+            streamMode: "messages",
+          }
+        );
 
       for await (const [message] of stream) {
         if (AIMessage.isInstance(message) && message.tool_calls) {
+          console.log("🤖 Agent response:", message.text);
           yield { type: "agent_chunk", text: message.text, ts: Date.now() };
           for (const toolCall of message.tool_calls) {
+            console.log("🔧 Tool call:", toolCall.name);
             yield {
               type: "tool_call",
               id: toolCall.id ?? uuidv4(),
@@ -199,8 +210,13 @@ async function* agentStream(
         }
       }
 
-      // Signal that the agent has finished responding for this turn
-      yield { type: "agent_end", ts: Date.now() };
+        // Signal that the agent has finished responding for this turn
+        yield { type: "agent_end", ts: Date.now() };
+      } catch (error) {
+        console.error("❌ Agent error:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        yield { type: "agent_end", ts: Date.now() };
+      }
     }
   }
 }
@@ -248,7 +264,9 @@ async function* ttsStream(
         }
         // Send all buffered text to Cartesia for synthesis
         if (event.type === "agent_end") {
-          await tts.sendText(buffer.join(""));
+          const text = buffer.join("");
+          console.log("🔊 Sending to TTS:", text);
+          await tts.sendText(text);
           buffer = [];
         }
       }
