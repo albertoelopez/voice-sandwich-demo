@@ -1,8 +1,13 @@
-import "dotenv/config";
+import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import { createAgent, AIMessage, ToolMessage } from "langchain";
 import path from "node:path";
+
+// Load .env from project root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+config({ path: path.join(__dirname, "../../../.env") });
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
@@ -20,8 +25,6 @@ import type { VoiceAgentEvent } from "./types";
 import { allSkills } from "./agent/skills";
 import { ChatGroq } from "@langchain/groq";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const STATIC_DIR = path.join(__dirname, "../../web/dist");
 const PORT = parseInt(process.env.PORT ?? "8000");
 
