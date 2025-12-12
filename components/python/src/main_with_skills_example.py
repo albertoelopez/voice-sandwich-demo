@@ -1,3 +1,16 @@
+"""
+Example: main.py with integrated modular skills architecture
+
+This file demonstrates how to integrate the new skills module into the existing
+main.py. The changes are minimal - just import and use the skills.
+
+Key changes from original main.py:
+1. Import all_skills from agent.skills module
+2. Replace inline skill definitions with imported skills
+3. Update system prompt to reference the new skills
+4. Agent now has 11 skills instead of 2
+"""
+
 import asyncio
 import contextlib
 from pathlib import Path
@@ -25,6 +38,8 @@ from events import (
     event_to_dict,
 )
 from utils import merge_async_iters
+
+# NEW: Import all skills from the modular architecture
 from agent.skills import all_skills
 
 load_dotenv()
@@ -48,33 +63,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# REMOVED: Inline skill definitions (add_to_order, confirm_order)
+# These are now imported from agent.skills
 
+# UPDATED: Enhanced system prompt that references the new skills
 system_prompt = """
-You are a friendly and helpful sandwich shop voice assistant. Your goal is to help customers with their orders and answer questions about our menu.
+You are a helpful sandwich shop assistant. Your goal is to take the user's order.
+Be concise and friendly.
 
-Key Responsibilities:
-- Take orders for sandwiches, sides, and drinks
-- Answer questions about menu items, ingredients, and prices
-- Help customers with dietary restrictions and preferences
-- Provide recommendations when asked
-- Manage the order (add, remove, modify items)
-- Confirm orders before sending to the kitchen
+You have access to several tools to help customers:
+- Use get_menu_info or check_availability to answer menu questions
+- Use add_to_order to add items to the customer's order
+- Use view_order to show what's currently in the order
+- Use modify_item or remove_from_order to make changes
+- Use confirm_order when the customer is ready to finalize
 
-Guidelines:
-- Be conversational and friendly in your tone
-- Keep responses concise for voice interaction (1-2 sentences when possible)
-- Ask clarifying questions when needed (size, toppings, etc.)
-- Use the available tools to access menu information and manage orders
-- Repeat back important details to ensure accuracy
+${CARTESIA_TTS_SYSTEM_PROMPT}
 """
 
+# UPDATED: Agent now uses all_skills (11 skills instead of 2)
 agent = create_agent(
     model="ollama:hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M",
-    tools=all_skills,
+    tools=all_skills,  # Now provides 11 comprehensive skills
     system_prompt=system_prompt,
     checkpointer=InMemorySaver(),
 )
 
+
+# The rest of the file remains unchanged...
 
 async def _stt_stream(
     audio_stream: AsyncIterator[bytes],

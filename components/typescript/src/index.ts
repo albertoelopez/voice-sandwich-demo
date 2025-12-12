@@ -13,12 +13,11 @@ import type WebSocket from "ws";
 import { iife, writableIterator } from "./utils";
 import { MemorySaver } from "@langchain/langgraph";
 import { HumanMessage } from "@langchain/core/messages";
-import { tool } from "@langchain/core/tools";
-import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { CARTESIA_TTS_SYSTEM_PROMPT, CartesiaTTS } from "./cartesia";
 import { AssemblyAISTT } from "./assemblyai/index";
 import type { VoiceAgentEvent } from "./types";
+import { allSkills } from "./agent/skills";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,47 +37,30 @@ const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
 app.use("/*", cors());
 
-const addToOrder = tool(
-  async ({ item, quantity }) => {
-    return `Added ${quantity} x ${item} to the order.`;
-  },
-  {
-    name: "add_to_order",
-    description: "Add an item to the customer's sandwich order.",
-    schema: z.object({
-      item: z.string(),
-      quantity: z.number(),
-    }),
-  }
-);
-
-const confirmOrder = tool(
-  async ({ orderSummary }) => {
-    return `Order confirmed: ${orderSummary}. Sending to kitchen.`;
-  },
-  {
-    name: "confirm_order",
-    description: "Confirm the final order with the customer.",
-    schema: z.object({
-      orderSummary: z.string().describe("Summary of the order"),
-    }),
-  }
-);
-
 const systemPrompt = `
-You are a helpful sandwich shop assistant. Your goal is to take the user's order.
-Be concise and friendly.
+You are a friendly and helpful sandwich shop voice assistant. Your goal is to help customers with their orders and answer questions about our menu.
 
-Available toppings: lettuce, tomato, onion, pickles, mayo, mustard.
-Available meats: turkey, ham, roast beef.
-Available cheeses: swiss, cheddar, provolone.
+Key Responsibilities:
+- Take orders for sandwiches, sides, and drinks
+- Answer questions about menu items, ingredients, and prices
+- Help customers with dietary restrictions and preferences
+- Provide recommendations when asked
+- Manage the order (add, remove, modify items)
+- Confirm orders before sending to the kitchen
+
+Guidelines:
+- Be conversational and friendly in your tone
+- Keep responses concise for voice interaction (1-2 sentences when possible)
+- Ask clarifying questions when needed (size, toppings, etc.)
+- Use the available tools to access menu information and manage orders
+- Repeat back important details to ensure accuracy
 
 ${CARTESIA_TTS_SYSTEM_PROMPT}
 `;
 
 const agent = createAgent({
   model: "ollama:hf.co/MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M",
-  tools: [addToOrder, confirmOrder],
+  tools: allSkills,
   checkpointer: new MemorySaver(),
   systemPrompt: systemPrompt,
 });
