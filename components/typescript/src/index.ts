@@ -65,11 +65,11 @@ ${CARTESIA_TTS_SYSTEM_PROMPT}
 // Try Groq first, fallback to Ollama if not available
 function getModel() {
   if (process.env.GROQ_API_KEY) {
-    console.log("🚀 Using Groq (llama-3.3-70b-versatile) for fast, high-quality inference");
+    console.log("🚀 Using Groq (mixtral-8x7b-32768) - balanced speed & function calling");
     return new ChatGroq({
       apiKey: process.env.GROQ_API_KEY,
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.7,
+      model: "mixtral-8x7b-32768", // Good balance: fast + reliable function calling
+      temperature: 0.3,
     });
   }
   console.log("🦙 Using local Ollama (llama-3.1-8b) as fallback");
