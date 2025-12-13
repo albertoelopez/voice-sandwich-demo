@@ -94,7 +94,6 @@ function getModel() {
 const agent = createAgent({
   model: getModel(),
   tools: allSkills,
-  checkpointer: new MemorySaver(),
   systemPrompt: systemPrompt,
 });
 
@@ -181,16 +180,22 @@ async function* agentStream(
     if (event.type === "stt_output") {
       console.log("🎤 User said:", event.transcript);
       try {
+        console.log("📡 Calling agent.stream()...");
         const stream = await agent.stream(
           { messages: [new HumanMessage(event.transcript)] },
           {
-            configurable: { thread_id: threadId },
             streamMode: "messages",
           }
         );
+        console.log("📡 Stream created, starting to read messages...");
 
+      let messageCount = 0;
       for await (const [message] of stream) {
+        messageCount++;
+        console.log(`📨 Message ${messageCount}:`, message.constructor.name, typeof message);
+
         if (AIMessage.isInstance(message)) {
+          console.log("  ✓ Is AIMessage, text:", message.text, "tool_calls:", message.tool_calls?.length || 0);
           if (message.text) {
             console.log("🤖 Agent response:", message.text);
             yield { type: "agent_chunk", text: message.text, ts: Date.now() };
@@ -209,6 +214,7 @@ async function* agentStream(
           }
         }
         if (ToolMessage.isInstance(message)) {
+          console.log("  ✓ Is ToolMessage");
           yield {
             type: "tool_result",
             toolCallId: message.tool_call_id ?? "",
@@ -221,6 +227,7 @@ async function* agentStream(
           };
         }
       }
+        console.log(`✅ Stream finished, processed ${messageCount} messages`);
 
         // Signal that the agent has finished responding for this turn
         yield { type: "agent_end", ts: Date.now() };
