@@ -179,6 +179,20 @@ async function* agentStream(
     yield event;
     if (event.type === "stt_output") {
       console.log("🎤 User said:", event.transcript);
+
+      // Pre-filter simple greetings to avoid unnecessary tool calls
+      const greetingPattern = /^(hello|hi|hey|good morning|good afternoon|good evening)\.?$/i;
+      if (greetingPattern.test(event.transcript.trim())) {
+        console.log("👋 Detected greeting, responding directly without tools");
+        yield {
+          type: "agent_chunk",
+          text: "Hi! Welcome to our sandwich shop. What size sandwich would you like? We have small, medium, or large.",
+          ts: Date.now()
+        };
+        yield { type: "agent_end", ts: Date.now() };
+        continue;
+      }
+
       try {
         console.log("📡 Calling agent.stream()...");
         const stream = await agent.stream(
